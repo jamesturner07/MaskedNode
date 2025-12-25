@@ -1,110 +1,139 @@
-# FHEVM Hardhat Template
+# MaskedNode
 
-A Hardhat-based template for developing Fully Homomorphic Encryption (FHE) enabled Solidity smart contracts using the
-FHEVM protocol by Zama.
+MaskedNode is a privacy-first message node system built on Zama FHEVM. It lets a user store an encrypted message on
+chain, keep the decryption key private, and selectively grant decryption rights to others without revealing plaintext
+to the public.
 
-## Quick Start
+## What this project does
+- Creates a new node from user input, generates a random EVM address A in the client, and uses A to encrypt the
+  message before it is stored on chain.
+- Keeps A encrypted so only the node owner can recover it and decrypt the message.
+- Lets the owner authorize another address to decrypt a specific node without exposing other nodes.
+- Shows all saved nodes in the UI and supports one-click decryption for authorized users.
 
-For detailed instructions see:
-[FHEVM Hardhat Quick Start Tutorial](https://docs.zama.ai/protocol/solidity-guides/getting-started/quick-start-tutorial)
+## Problems this solves
+- On-chain storage of sensitive data without plaintext exposure.
+- Sharing specific messages without sharing global access or account-level secrets.
+- User-controlled privacy without relying on centralized custodians or off-chain databases.
+- Clear, auditable access control for encrypted data.
 
-### Prerequisites
+## Advantages
+- End-to-end privacy: ciphertext on chain, keys stay client-side.
+- Fine-grained access: grant decryption per node and per address.
+- Non-custodial: users keep their own keys and control permissions.
+- Verifiable: all permissions and nodes are recorded on chain.
+- Practical UX: one flow for create, view, decrypt, and authorize.
 
-- **Node.js**: Version 20 or higher
-- **npm or yarn/pnpm**: Package manager
+## Core user flow
+1. Create a node by entering a message in the UI.
+2. The client generates a random EVM address A, encrypts the message with A, and submits ciphertext on chain.
+3. The owner decrypts A locally and then decrypts the message.
+4. The owner can authorize another address to decrypt a specific node.
 
-### Installation
+## Architecture and data flow
+- Smart contracts (FHEVM) store encrypted messages and access-control state.
+- Client-side cryptography generates and protects A.
+- Zama relayer supports FHE operations for read paths.
+- Frontend renders nodes, handles encryption/decryption, and manages permissions.
 
-1. **Install dependencies**
+## Technology stack
+- Smart contracts: Solidity + Hardhat + Zama FHEVM
+- Frontend: React + Vite
+- Wallet UX: RainbowKit
+- Reads: viem
+- Writes: ethers
+- Package manager: npm
 
+## Repository layout
+- `contracts/`: FHE-enabled smart contracts
+- `deploy/`: deployment scripts
+- `tasks/`: Hardhat tasks
+- `test/`: test suite
+- `home/`: frontend application
+- `docs/`: Zama integration docs
+
+## Prerequisites
+- Node.js 20+
+- npm
+- An EVM wallet with Sepolia ETH for deployment
+- An Infura API key for Sepolia RPC access
+
+## Configuration
+- Create a `.env` in the repo root for deployment only.
+- Required variables:
+  - `PRIVATE_KEY` (deployer key, no MNEMONIC)
+  - `INFURA_API_KEY`
+- Optional:
+  - `ETHERSCAN_API_KEY` for verification
+- The frontend must not use environment variables. Configure network and addresses in source.
+- Frontend ABI must match the generated ABI in `deployments/sepolia` after deployment.
+
+## Development workflow
+1. Install dependencies:
    ```bash
    npm install
    ```
 
-2. **Set up environment variables**
-
-   ```bash
-   npx hardhat vars set MNEMONIC
-
-   # Set your Infura API key for network access
-   npx hardhat vars set INFURA_API_KEY
-
-   # Optional: Set Etherscan API key for contract verification
-   npx hardhat vars set ETHERSCAN_API_KEY
-   ```
-
-3. **Compile and test**
-
+2. Compile contracts:
    ```bash
    npm run compile
+   ```
+
+3. Run tests and tasks:
+   ```bash
    npm run test
    ```
 
-4. **Deploy to local network**
-
+4. Start a local node (for contract tests and local deploys only):
    ```bash
-   # Start a local FHEVM-ready node
    npx hardhat node
-   # Deploy to local network
+   ```
+
+5. Deploy to local node if needed:
+   ```bash
    npx hardhat deploy --network localhost
    ```
 
-5. **Deploy to Sepolia Testnet**
-
+6. Run the frontend:
    ```bash
-   # Deploy to Sepolia
+   cd home
+   npm install
+   npm run dev
+   ```
+
+Note: the frontend should target Sepolia or another non-local RPC. Do not point the UI at localhost.
+
+## Deployment to Sepolia
+1. Ensure tests and tasks pass locally.
+2. Deploy with your private key:
+   ```bash
    npx hardhat deploy --network sepolia
-   # Verify contract on Etherscan
+   ```
+3. Optional verification:
+   ```bash
    npx hardhat verify --network sepolia <CONTRACT_ADDRESS>
    ```
+4. Copy the contract ABI from `deployments/sepolia` into the frontend and update the deployed address.
 
-6. **Test on Sepolia Testnet**
+## Frontend usage
+- Connect a wallet.
+- Create a node by submitting a message.
+- View your nodes and decrypt authorized nodes.
+- Grant decryption access to another address for a specific node.
 
-   ```bash
-   # Once deployed, you can run a simple test on Sepolia.
-   npx hardhat test --network sepolia
-   ```
+## Security and privacy notes
+- Encrypted payloads are stored on chain; metadata such as timestamps and sender address remain visible.
+- Only authorized addresses can decrypt; losing keys means losing access.
+- Decryption happens client-side; do not share private keys.
+- Network reliability of the relayer can affect read operations.
 
-## 📁 Project Structure
+## Future roadmap
+- Batch permissions and multi-recipient sharing.
+- Revocation history and audit views in the UI.
+- Indexer for faster node discovery and search.
+- Gas and ciphertext size optimizations.
+- Formal security review and fuzzing.
+- Optional cross-chain support once FHEVM expands.
 
-```
-fhevm-hardhat-template/
-├── contracts/           # Smart contract source files
-│   └── FHECounter.sol   # Example FHE counter contract
-├── deploy/              # Deployment scripts
-├── tasks/               # Hardhat custom tasks
-├── test/                # Test files
-├── hardhat.config.ts    # Hardhat configuration
-└── package.json         # Dependencies and scripts
-```
-
-## 📜 Available Scripts
-
-| Script             | Description              |
-| ------------------ | ------------------------ |
-| `npm run compile`  | Compile all contracts    |
-| `npm run test`     | Run all tests            |
-| `npm run coverage` | Generate coverage report |
-| `npm run lint`     | Run linting checks       |
-| `npm run clean`    | Clean build artifacts    |
-
-## 📚 Documentation
-
-- [FHEVM Documentation](https://docs.zama.ai/fhevm)
-- [FHEVM Hardhat Setup Guide](https://docs.zama.ai/protocol/solidity-guides/getting-started/setup)
-- [FHEVM Testing Guide](https://docs.zama.ai/protocol/solidity-guides/development-guide/hardhat/write_test)
-- [FHEVM Hardhat Plugin](https://docs.zama.ai/protocol/solidity-guides/development-guide/hardhat)
-
-## 📄 License
-
-This project is licensed under the BSD-3-Clause-Clear License. See the [LICENSE](LICENSE) file for details.
-
-## 🆘 Support
-
-- **GitHub Issues**: [Report bugs or request features](https://github.com/zama-ai/fhevm/issues)
-- **Documentation**: [FHEVM Docs](https://docs.zama.ai)
-- **Community**: [Zama Discord](https://discord.gg/zama)
-
----
-
-**Built with ❤️ by the Zama team**
+## License
+BSD-3-Clause-Clear. See `LICENSE`.
